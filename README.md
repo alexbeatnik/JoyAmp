@@ -50,7 +50,7 @@ first (Power / Menu). The session ends with **✕** in the media controls or not
 If only one of JoyAmp / [JoyBook](https://github.com/alexbeatnik/JoyBook) has its joystick service
 enabled, that service also drives whatever the other app is playing through standard media keys
 (Left / Right = previous / next, OK = play / pause), so the stick never ends up scrolling the lock
-screen's media carousel. The home screen shows a warning while JoyAmp's own service is off.
+screen's media carousel. The home screen shows a warning while JoyAmp's own service is off or not actually running (it can get stuck after an update; turning it off and on fixes it, and with the permission below the app does that by itself).
 
 The Accessibility service only looks at the five stick keys and never logs key presses.
 

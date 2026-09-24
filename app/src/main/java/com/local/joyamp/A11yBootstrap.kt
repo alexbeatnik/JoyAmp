@@ -2,6 +2,8 @@ package com.local.joyamp
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 
@@ -29,6 +31,32 @@ object A11yBootstrap {
             // Permission not granted: the user turns it on in Settings.
         } catch (t: Throwable) {
             Log.w(TAG, "cannot re-enable accessibility", t)
+        }
+    }
+
+    /**
+     * Enabled in Settings but never connected (happens after app updates on this Unisoc build):
+     * take ourselves out of the list and put us back, which makes the system bind again.
+     * Needs WRITE_SECURE_SETTINGS; without it the UI asks the user to toggle the service.
+     */
+    fun healIfStuck(ctx: Context) {
+        if (JoystickKeyService.running || !isEnabled(ctx)) return
+        val cr = ctx.contentResolver
+        val mine = component(ctx).flattenToString()
+        val others = Settings.Secure.getString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+            ?.split(':')?.filter { it.isNotBlank() && it != "null" && !same(it, ctx) }.orEmpty()
+        try {
+            Settings.Secure.putString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, others.joinToString(":"))
+            Handler(Looper.getMainLooper()).postDelayed({
+                try {
+                    Settings.Secure.putString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, (others + mine).joinToString(":"))
+                    Log.i(TAG, "re-bound stuck accessibility service")
+                } catch (_: Exception) {
+                }
+            }, 800)
+        } catch (_: SecurityException) {
+        } catch (t: Throwable) {
+            Log.w(TAG, "cannot re-bind accessibility", t)
         }
     }
 

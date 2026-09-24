@@ -91,6 +91,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Give the system a moment to connect the joystick service, then fix / report a stuck one. */
+    private val healStuckJoystick = Runnable {
+        A11yBootstrap.healIfStuck(this)
+        handler.postDelayed({ refreshSettings() }, 2500)
+    }
+
     private val conn = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             service = (binder as MusicService.LocalBinder).service()
@@ -201,8 +207,14 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         A11yBootstrap.ensureEnabled(this)
+        handler.postDelayed(healStuckJoystick, 4000)
         refreshSettings() // accessibility may have been toggled meanwhile
         updateNowPlaying()
+    }
+
+    override fun onPause() {
+        handler.removeCallbacks(healStuckJoystick)
+        super.onPause()
     }
 
     override fun onStop() {
@@ -378,9 +390,14 @@ class MainActivity : AppCompatActivity() {
         val touch = !Prefs.ignoreTouch(this)
         rowTouch.setToggle(touch)
         rowTouch.setSubtitle(getString(if (touch) R.string.setting_touch_on else R.string.setting_touch_off))
-        val joystickOn = A11yBootstrap.isEnabled(this)
+        val joystickEnabled = A11yBootstrap.isEnabled(this)
+        val joystickOn = JoystickKeyService.running
         rowJoystick.setBadge(joystickOn)
-        findViewById<View>(R.id.a11yWarning).visibility = if (joystickOn) View.GONE else View.VISIBLE
+        rowJoystick.setSubtitle(getString(if (joystickEnabled && !joystickOn) R.string.a11y_stuck_sub else R.string.setting_joystick_sub))
+        findViewById<TextView>(R.id.a11yWarning).apply {
+            visibility = if (joystickOn) View.GONE else View.VISIBLE
+            setText(if (joystickEnabled) R.string.a11y_stuck_warning else R.string.a11y_off_warning)
+        }
         tintIndicator(indShuffle, Prefs.shuffle(this))
         tintIndicator(indRepeat, Prefs.repeatAll(this))
     }
