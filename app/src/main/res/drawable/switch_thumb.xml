@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true">
+        <inset android:inset="3dp">
+            <shape android:shape="oval">
+                <solid android:color="@color/ja_on_accent" />
+                <size android:width="16dp" android:height="16dp" />
+            </shape>
+        </inset>
+    </item>
+    <item>
+        <inset android:inset="3dp">
+            <shape android:shape="oval">
+                <solid android:color="@color/ja_text_2" />
+                <size android:width="16dp" android:height="16dp" />
+            </shape>
+        </inset>
+    </item>
+</selector>

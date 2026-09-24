@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.JoyAmp" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/ja_bg</item>
+        <item name="android:statusBarColor">@color/ja_bg_top</item>
+        <item name="android:navigationBarColor">@color/ja_bg</item>
+        <item name="colorPrimary">@color/ja_accent</item>
+        <item name="colorPrimaryDark">@color/ja_bg</item>
+        <item name="colorAccent">@color/ja_accent</item>
+        <item name="colorControlActivated">@color/ja_accent</item>
+        <item name="colorControlHighlight">#1FFFFFFF</item>
+        <item name="android:textColorPrimary">@color/ja_text</item>
+        <item name="android:textColorSecondary">@color/ja_text_2</item>
+    </style>
+
+    <style name="JoyAmp.Keycap" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minWidth">18dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">@drawable/bg_keycap</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
+        <item name="android:textColor">@color/ja_text_2</item>
+        <item name="android:textSize">9sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="JoyAmp.KeyLabel" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:layout_marginEnd">10dp</item>
+        <item name="android:textColor">@color/ja_text_3</item>
+        <item name="android:textSize">10sp</item>
+    </style>
+</resources>

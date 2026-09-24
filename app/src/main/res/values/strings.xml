@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">JoyAmp</string>
+    <string name="settings">Settings</string>
+    <string name="library">LIBRARY</string>
+    <string name="nothing_playing">Nothing playing</string>
+    <string name="pick_track">Pick a track and press OK</string>
+    <string name="track_pos">%1$d / %2$d</string>
+    <string name="tracks_count">%1$d tracks</string>
+    <string name="scanning">Scanning…</string>
+    <string name="no_songs">No tracks in this folder</string>
+    <string name="no_folder">No music folder selected</string>
+    <string name="empty_hint">Press # and choose Music folder</string>
+    <string name="refreshed">Library updated: %1$d tracks</string>
+
+    <string name="setting_folder">Music folder</string>
+    <string name="folder_none">Not selected</string>
+    <string name="folder_cleared">Music folder cleared</string>
+    <string name="setting_refresh">Rescan library</string>
+    <string name="setting_shuffle">Shuffle</string>
+    <string name="setting_shuffle_sub">Random next track</string>
+    <string name="setting_repeat">Repeat all</string>
+    <string name="setting_repeat_sub">Start over after the last track</string>
+    <string name="setting_touch">Touchscreen</string>
+    <string name="setting_touch_on">Taps work</string>
+    <string name="setting_touch_off">Keypad only</string>
+    <string name="setting_joystick">Lock-screen joystick</string>
+    <string name="setting_joystick_sub">Accessibility → JoyAmp</string>
+    <string name="on">ON</string>
+    <string name="off">OFF</string>
+    <string name="settings_hint">Home: ▴▾ browse · ◂▸ prev / next · OK play · 2 / 8 page · 5 now playing\nLock screen: ◂▸ track · OK play / pause · ▴▾ seek (hold to scrub)\nHold OK on Music folder to clear it.</string>
+    <string name="joystick_keys_hint">Turn on JoyAmp here to control music from the lock screen</string>
+
+    <string name="hint_track">Track</string>
+    <string name="hint_play">Play</string>
+    <string name="hint_settings">Settings</string>
+    <string name="hint_move">Move</string>
+    <string name="hint_select">Select</string>
+    <string name="hint_back">Back</string>
+
+    <string name="channel_name">Playback</string>
+    <string name="prev">Previous</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="next">Next</string>
+    <string name="close">Close</string>
+    <string name="playing">Playing</string>
+    <string name="paused">Paused</string>
+    <string name="osd_sub">%1$s  ·  %2$s</string>
+    <string name="time_of">%1$s / %2$s</string>
+
+    <string name="a11y_joystick_desc">Lets the joystick control JoyAmp on the lock screen: Left / Right = previous / next track, Center = play / pause, Up / Down = seek. Keys are intercepted only while the lock screen is showing and a JoyAmp session is open; calls and alarms are never blocked.</string>
+</resources>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ja_bg">#FF0A0C10</color>
+    <color name="ja_bg_top">#FF151923</color>
+    <color name="ja_surface">#FF141821</color>
+    <color name="ja_surface_top">#FF191E29</color>
+    <color name="ja_surface_hi">#FF1F2532</color>
+    <color name="ja_outline">#FF242A36</color>
+    <color name="ja_outline_hi">#FF394152</color>
+    <color name="ja_text">#FFEEF1F5</color>
+    <color name="ja_text_2">#FF9AA3B2</color>
+    <color name="ja_text_3">#FF626B7A</color>
+    <color name="ja_accent">#FFFFB020</color>
+    <color name="ja_accent_2">#FFFF7A2F</color>
+    <color name="ja_accent_pressed">#FFE09412</color>
+    <color name="ja_accent_soft">#29FFB020</color>
+    <color name="ja_on_accent">#FF1A1204</color>
+    <color name="ja_green">#FF4CC764</color>
+    <color name="ja_green_soft">#2442C35C</color>
+    <color name="ja_track_off">#FF2C3240</color>
+    <color name="ja_icon_bg">#FF0D0F14</color>
+</resources>

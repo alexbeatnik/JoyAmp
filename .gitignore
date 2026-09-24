@@ -1,0 +1,26 @@
+# Gradle / Android Studio
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.cxx/
+.externalNativeBuild/
+
+# Build outputs and signing material
+*.apk
+*.aab
+*.jks
+*.keystore
+*.p12
+
+# Local working files (not part of the app)
+/_*.py
+/patch_*.py
+/_lib_dump.txt
+/_backup_*.zip
+/joyamp-icon-*.png
+/adb-home/
+/.android-adb/
