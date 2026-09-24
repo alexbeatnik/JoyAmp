@@ -57,6 +57,7 @@ class MusicService : Service() {
         const val EXTRA_INDEX = "index"
         const val EXTRA_POS = "pos"
         const val EXTRA_DELTA = "delta"
+        private const val SYSTEM_UI = "com.android.systemui"
         private val LOCKED_MEDIA_KEYS = setOf(
             KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
             KeyEvent.KEYCODE_HEADSETHOOK, KeyEvent.KEYCODE_MEDIA_STOP, KeyEvent.KEYCODE_MEDIA_NEXT,
@@ -206,11 +207,12 @@ class MusicService : Service() {
         )
         session = MediaSessionCompat(this, "JoyAmp").apply {
             setCallback(object : MediaSessionCompat.Callback() {
-                override fun onPlay() = play()
-                override fun onPause() = pause()
+                // On the lock screen the play/pause button only shows the state (see updatePlaybackState).
+                override fun onPlay() { if (!fromLockScreen()) play() }
+                override fun onPause() { if (!fromLockScreen()) pause() }
                 override fun onSkipToNext() = next()
                 override fun onSkipToPrevious() = prev()
-                override fun onStop() = pause()
+                override fun onStop() { if (!fromLockScreen()) pause() }
                 override fun onSeekTo(pos: Long) = seekTo(pos.toInt())
                 override fun onFastForward() = seekBy(10_000)
                 override fun onRewind() = seekBy(-10_000)
@@ -253,6 +255,10 @@ class MusicService : Service() {
     }
 
     private fun isLocked() = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
+
+    /** The call comes from a tap on the lock screen player (SystemUI) while the keyguard is up. */
+    private fun fromLockScreen(): Boolean =
+        lockScreenMode && session.currentControllerInfo.packageName == SYSTEM_UI
 
     private fun updateLockScreenMode(action: String?) {
         // At screen off the keyguard is not up yet: switch before it shows, the next screen on corrects it.
@@ -687,9 +693,13 @@ class MusicService : Service() {
             PlaybackStateCompat.ACTION_STOP
         val b = PlaybackStateCompat.Builder()
             .setState(state, position().toLong(), if (state == PlaybackStateCompat.STATE_PLAYING) 1f else 0f)
-        // In a pocket the lock screen player gets tapped by accident, so while the keyguard is up it has no
-        // buttons and no seek bar; the joystick and headset keys still work (see onMediaButtonEvent).
-        if (!lockScreenMode) {
+        // In a pocket the lock screen player gets tapped by accident, so while the keyguard is up it only
+        // advertises play/pause: the card then shows the playing / paused icon, but its taps are ignored
+        // (fromLockScreen) and there are no other buttons and no seek bar. The joystick and headset keys
+        // still work (see onMediaButtonEvent).
+        if (lockScreenMode) {
+            b.setActions(PlaybackStateCompat.ACTION_PLAY_PAUSE)
+        } else {
             // Android 13 media controls ignore notification actions; "close" has to be a custom action.
             b.setActions(actions)
                 .addCustomAction(PlaybackStateCompat.CustomAction.Builder(ACTION_CLOSE, getString(R.string.close), R.drawable.ic_close).build())
