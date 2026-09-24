@@ -50,4 +50,5 @@
     <string name="time_of">%1$s / %2$s</string>
 
     <string name="a11y_joystick_desc">Lets the joystick control JoyAmp on the lock screen: Left / Right = previous / next track, Center = play / pause, Up / Down = seek. Keys are intercepted only while the lock screen is showing and a JoyAmp session is open; calls and alarms are never blocked.</string>
+    <string name="a11y_off_warning">Lock-screen joystick is off · press # and turn it on</string>
 </resources>

@@ -3,6 +3,7 @@ package com.local.joyamp
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.KeyguardManager
+import android.content.ComponentName
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.media.AudioAttributes
@@ -11,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
+import android.provider.Settings
 import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.KeyEvent
@@ -47,6 +49,17 @@ class JoystickKeyService : AccessibilityService() {
             KeyEvent.KEYCODE_DPAD_DOWN,
         )
 
+        /** The other Joy app; its own service drives it when that service is on. */
+        private const val SIBLING_PKG = "com.local.joybook"
+        private const val SIBLING_SERVICE = "com.local.joybook.JoystickKeyService"
+        /** After forwarding a key, keep handling the stick this long so OK can resume what it paused. */
+        private const val FORWARD_ARMED_MS = 30 * 60_000L
+        private val MEDIA_KEYS = mapOf(
+            KeyEvent.KEYCODE_DPAD_LEFT to KeyEvent.KEYCODE_MEDIA_PREVIOUS,
+            KeyEvent.KEYCODE_DPAD_RIGHT to KeyEvent.KEYCODE_MEDIA_NEXT,
+            KeyEvent.KEYCODE_DPAD_CENTER to KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+        )
+
         /** Something that owns the screen over the keyguard is making noise. */
         private val URGENT_USAGES = setOf(
             AudioAttributes.USAGE_ALARM,
@@ -59,6 +72,9 @@ class JoystickKeyService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     /** Keys whose DOWN we swallowed; their repeats and UP must be swallowed too. */
     private val consumed = HashSet<Int>()
+    /** Swallowed keys that went to another player as media keys (no repeats for those). */
+    private val forwarded = HashSet<Int>()
+    private var forwardArmedUntil = 0L
     private var lastPressAt = 0L
     private var lastSeekAt = 0L
     private var unlockingUntil = 0L
@@ -93,10 +109,14 @@ class JoystickKeyService : AccessibilityService() {
             return false
         }
         when (event.action) {
-            KeyEvent.ACTION_UP -> return consumed.remove(code)
+            KeyEvent.ACTION_UP -> {
+                forwarded.remove(code)
+                return consumed.remove(code)
+            }
             KeyEvent.ACTION_DOWN -> {
                 if (event.repeatCount > 0) {
                     if (code !in consumed) return false
+                    if (code in forwarded) return true
                     if (code == KeyEvent.KEYCODE_DPAD_UP || code == KeyEvent.KEYCODE_DPAD_DOWN) {
                         val now = SystemClock.uptimeMillis()
                         if (now - lastSeekAt >= SEEK_REPEAT_MS) {
@@ -107,8 +127,19 @@ class JoystickKeyService : AccessibilityService() {
                     return true
                 }
                 consumed.remove(code)
-                val svc = MusicService.instance ?: return false
-                if (!shouldCapture(svc)) return false
+                forwarded.remove(code)
+                val svc = MusicService.instance?.takeIf { shouldCapture(it) }
+                if (svc == null) {
+                    if (!shouldForwardToMediaSession(code)) return false
+                    consumed.add(code)
+                    forwarded.add(code)
+                    val now = SystemClock.uptimeMillis()
+                    if (now - lastPressAt >= CHATTER_MS) {
+                        lastPressAt = now
+                        forwardMediaKey(code)
+                    }
+                    return true
+                }
                 consumed.add(code)
                 val now = SystemClock.uptimeMillis()
                 if (now - lastPressAt < CHATTER_MS) return true
@@ -151,8 +182,14 @@ class JoystickKeyService : AccessibilityService() {
 
     private fun shouldCapture(svc: MusicService): Boolean {
         if (!svc.hasSession()) return false
+        if (svc.focusLostTransiently) return false
         // JoyBook also listens to the stick; whoever took the audio last owns it.
         if (!svc.holdsAudioFocus()) return false
+        return lockScreenReady()
+    }
+
+    /** Lock screen lit, nothing urgent (call, alarm) in front, not in the middle of typing a PIN. */
+    private fun lockScreenReady(): Boolean {
         if (SystemClock.uptimeMillis() < unlockingUntil) return false
         val pm = getSystemService(PowerManager::class.java) ?: return false
         if (!pm.isInteractive) return false
@@ -160,8 +197,35 @@ class JoystickKeyService : AccessibilityService() {
         if (!km.isKeyguardLocked) return false
         val am = getSystemService(AudioManager::class.java) ?: return false
         if (am.mode != AudioManager.MODE_NORMAL) return false // ringing or in a call
-        if (svc.focusLostTransiently) return false
         return am.activePlaybackConfigurations.none { it.audioAttributes.usage in URGENT_USAGES }
+    }
+
+    /**
+     * Someone else is playing and the other Joy app's joystick service is switched off (this Unisoc
+     * build likes to drop it): drive that player with standard media keys instead of letting the
+     * keyguard scroll its media carousel.
+     */
+    private fun shouldForwardToMediaSession(code: Int): Boolean {
+        if (code !in MEDIA_KEYS || siblingServiceEnabled() || !lockScreenReady()) return false
+        val am = getSystemService(AudioManager::class.java) ?: return false
+        return am.isMusicActive || SystemClock.uptimeMillis() < forwardArmedUntil
+    }
+
+    private fun forwardMediaKey(code: Int) {
+        val media = MEDIA_KEYS[code] ?: return
+        val am = getSystemService(AudioManager::class.java) ?: return
+        val t = SystemClock.uptimeMillis()
+        am.dispatchMediaKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, media, 0))
+        am.dispatchMediaKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_UP, media, 0))
+        forwardArmedUntil = t + FORWARD_ARMED_MS
+    }
+
+    private fun siblingServiceEnabled(): Boolean {
+        val list = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
+        return list.split(':').any { entry ->
+            val cn = ComponentName.unflattenFromString(entry)
+            cn != null && cn.packageName == SIBLING_PKG && cn.className == SIBLING_SERVICE
+        }
     }
 
     // ---- On-screen feedback over the keyguard ------------------------------------------

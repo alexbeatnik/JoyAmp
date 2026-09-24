@@ -239,6 +239,23 @@
                 </LinearLayout>
             </LinearLayout>
 
+
+            <TextView
+                android:id="@+id/a11yWarning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_warning"
+                android:gravity="center"
+                android:paddingStart="8dp"
+                android:paddingTop="5dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="5dp"
+                android:text="@string/a11y_off_warning"
+                android:textColor="@color/ja_accent"
+                android:textSize="10.5sp"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

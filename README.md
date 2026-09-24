@@ -47,7 +47,20 @@ intercepted only when **all** of these hold, otherwise it behaves normally:
 With the display **fully off** Android hands the stick to no app, so light up the lock screen
 first (Power / Menu). The session ends with **✕** in the media controls or notification.
 
+If only one of JoyAmp / [JoyBook](https://github.com/alexbeatnik/JoyBook) has its joystick service
+enabled, that service also drives whatever the other app is playing through standard media keys
+(Left / Right = previous / next, OK = play / pause), so the stick never ends up scrolling the lock
+screen's media carousel. The home screen shows a warning while JoyAmp's own service is off.
+
 The Accessibility service only looks at the five stick keys and never logs key presses.
+
+Some Unisoc builds drop Accessibility services after an update, and force-stopping an app always
+disables its service. JoyAmp can re-enable itself if you grant it permission to write secure
+settings once:
+
+```sh
+adb shell pm grant com.local.joyamp android.permission.WRITE_SECURE_SETTINGS
+```
 
 ## Install
 

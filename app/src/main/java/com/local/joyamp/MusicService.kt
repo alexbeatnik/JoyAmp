@@ -162,6 +162,7 @@ class MusicService : Service() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        A11yBootstrap.ensureEnabled(this)
         if (playlist.isEmpty()) {
             playlist = Prefs.loadPlaylist(this)
             currentIndex = Prefs.lastIndex(this).coerceIn(0, playlist.lastIndex.coerceAtLeast(0))

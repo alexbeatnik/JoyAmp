@@ -200,6 +200,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        A11yBootstrap.ensureEnabled(this)
         refreshSettings() // accessibility may have been toggled meanwhile
         updateNowPlaying()
     }
@@ -377,7 +378,9 @@ class MainActivity : AppCompatActivity() {
         val touch = !Prefs.ignoreTouch(this)
         rowTouch.setToggle(touch)
         rowTouch.setSubtitle(getString(if (touch) R.string.setting_touch_on else R.string.setting_touch_off))
-        rowJoystick.setBadge(isJoystickA11yEnabled())
+        val joystickOn = A11yBootstrap.isEnabled(this)
+        rowJoystick.setBadge(joystickOn)
+        findViewById<View>(R.id.a11yWarning).visibility = if (joystickOn) View.GONE else View.VISIBLE
         tintIndicator(indShuffle, Prefs.shuffle(this))
         tintIndicator(indRepeat, Prefs.repeatAll(this))
     }
@@ -386,16 +389,6 @@ class MainActivity : AppCompatActivity() {
         val color = ContextCompat.getColor(this, if (on) R.color.ja_accent else R.color.ja_text_3)
         ImageViewCompat.setImageTintList(v, android.content.res.ColorStateList.valueOf(color))
         v.alpha = if (on) 1f else 0.6f
-    }
-
-    private fun isJoystickA11yEnabled(): Boolean {
-        val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-            ?: return false
-        val mine = ComponentName(this, JoystickKeyService::class.java)
-        return enabled.split(':').any {
-            val cn = ComponentName.unflattenFromString(it)
-            cn != null && cn.packageName == mine.packageName && cn.className == mine.className
-        }
     }
 
     private fun requestNotificationPermission() {
