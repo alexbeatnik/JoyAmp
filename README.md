@@ -45,7 +45,12 @@ intercepted only when **all** of these hold, otherwise it behaves normally:
 - on a PIN-protected phone you haven't just typed digits / Menu (15 s grace for the PIN pad).
 
 With the display **fully off** Android hands the stick to no app, so light up the lock screen
-first (Power / Menu). The session ends with **✕** in the media controls or notification.
+first (Power / Menu). The session ends with **✕** in the media controls (once unlocked) or the
+notification.
+
+The media card on the lock screen shows what is playing but has **no buttons and no seek bar**, so
+taps in a pocket can't skip or pause. The stick, headset and media keys still work, and the full
+controls are back in the notification shade as soon as the phone is unlocked.
 
 If only one of JoyAmp / [JoyBook](https://github.com/alexbeatnik/JoyBook) has its joystick service
 enabled, that service also drives whatever the other app is playing through standard media keys

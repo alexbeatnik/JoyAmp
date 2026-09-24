@@ -1,5 +1,6 @@
 package com.local.joyamp
 
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -25,6 +26,7 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
+import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -55,6 +57,11 @@ class MusicService : Service() {
         const val EXTRA_INDEX = "index"
         const val EXTRA_POS = "pos"
         const val EXTRA_DELTA = "delta"
+        private val LOCKED_MEDIA_KEYS = setOf(
+            KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+            KeyEvent.KEYCODE_HEADSETHOOK, KeyEvent.KEYCODE_MEDIA_STOP, KeyEvent.KEYCODE_MEDIA_NEXT,
+            KeyEvent.KEYCODE_MEDIA_PREVIOUS, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD, KeyEvent.KEYCODE_MEDIA_REWIND,
+        )
 
         private const val RESTART_THRESHOLD_MS = 3000
         private const val DUCK_VOLUME = 0.3f
@@ -159,6 +166,12 @@ class MusicService : Service() {
         }
     }
 
+    /** Keyguard is up: the lock screen player gets no touch controls (see updatePlaybackState). */
+    private var lockScreenMode = false
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) = updateLockScreenMode(intent.action)
+    }
+
     override fun onCreate() {
         super.onCreate()
         instance = this
@@ -173,6 +186,18 @@ class MusicService : Service() {
             .setOnAudioFocusChangeListener(focusListener, handler)
             .build()
         createChannel()
+        lockScreenMode = isLocked()
+        ContextCompat.registerReceiver(
+            this, screenReceiver,
+            IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_SCREEN_ON)
+                addAction(Intent.ACTION_USER_PRESENT)
+            },
+            // USER_PRESENT comes from SystemUI, not the system, so a not-exported receiver misses it.
+            // All three are protected broadcasts: no other app can send them.
+            ContextCompat.RECEIVER_EXPORTED
+        )
 
         val mediaButtonIntent = PendingIntent.getBroadcast(
             this, 0,
@@ -192,10 +217,52 @@ class MusicService : Service() {
                 override fun onCustomAction(action: String?, extras: android.os.Bundle?) {
                     if (action == ACTION_CLOSE) endSession()
                 }
+
+                override fun onMediaButtonEvent(mediaButtonEvent: Intent): Boolean {
+                    // The default handler obeys only the actions the playback state advertises, and on the
+                    // lock screen it advertises none: keep headset keys and the keys JoyBook forwards working.
+                    val ke = keyEvent(mediaButtonEvent)
+                    if (!lockScreenMode || ke == null || ke.keyCode !in LOCKED_MEDIA_KEYS) {
+                        return super.onMediaButtonEvent(mediaButtonEvent)
+                    }
+                    if (ke.action == KeyEvent.ACTION_DOWN && ke.repeatCount == 0) {
+                        when (ke.keyCode) {
+                            KeyEvent.KEYCODE_MEDIA_PLAY -> play()
+                            KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_MEDIA_STOP -> pause()
+                            KeyEvent.KEYCODE_MEDIA_NEXT -> next()
+                            KeyEvent.KEYCODE_MEDIA_PREVIOUS -> prev()
+                            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> seekBy(10_000)
+                            KeyEvent.KEYCODE_MEDIA_REWIND -> seekBy(-10_000)
+                            else -> toggle()
+                        }
+                    }
+                    return true
+                }
             })
             setMediaButtonReceiver(mediaButtonIntent)
             isActive = false
         }
+        updatePlaybackState()
+    }
+
+    private fun keyEvent(intent: Intent): KeyEvent? = if (Build.VERSION.SDK_INT >= 33) {
+        intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
+    } else {
+        @Suppress("DEPRECATION")
+        intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT)
+    }
+
+    private fun isLocked() = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
+
+    private fun updateLockScreenMode(action: String?) {
+        // At screen off the keyguard is not up yet: switch before it shows, the next screen on corrects it.
+        val locked = when (action) {
+            Intent.ACTION_SCREEN_OFF -> true
+            Intent.ACTION_USER_PRESENT -> false
+            else -> isLocked()
+        }
+        if (locked == lockScreenMode) return
+        lockScreenMode = locked
         updatePlaybackState()
     }
 
@@ -618,15 +685,16 @@ class MusicService : Service() {
             PlaybackStateCompat.ACTION_FAST_FORWARD or
             PlaybackStateCompat.ACTION_REWIND or
             PlaybackStateCompat.ACTION_STOP
-        // Android 13 media controls ignore notification actions; "close" has to be a custom action.
-        val close = PlaybackStateCompat.CustomAction.Builder(ACTION_CLOSE, getString(R.string.close), R.drawable.ic_close).build()
-        session.setPlaybackState(
-            PlaybackStateCompat.Builder()
-                .setActions(actions)
-                .addCustomAction(close)
-                .setState(state, position().toLong(), if (state == PlaybackStateCompat.STATE_PLAYING) 1f else 0f)
-                .build()
-        )
+        val b = PlaybackStateCompat.Builder()
+            .setState(state, position().toLong(), if (state == PlaybackStateCompat.STATE_PLAYING) 1f else 0f)
+        // In a pocket the lock screen player gets tapped by accident, so while the keyguard is up it has no
+        // buttons and no seek bar; the joystick and headset keys still work (see onMediaButtonEvent).
+        if (!lockScreenMode) {
+            // Android 13 media controls ignore notification actions; "close" has to be a custom action.
+            b.setActions(actions)
+                .addCustomAction(PlaybackStateCompat.CustomAction.Builder(ACTION_CLOSE, getString(R.string.close), R.drawable.ic_close).build())
+        }
+        session.setPlaybackState(b.build())
     }
 
     override fun onDestroy() {
@@ -635,6 +703,7 @@ class MusicService : Service() {
         releasePlayer()
         abandonFocus()
         updateNoisyReceiver()
+        try { unregisterReceiver(screenReceiver) } catch (_: Exception) {}
         session.release()
         metaExecutor.shutdownNow()
         handler.removeCallbacksAndMessages(null)
